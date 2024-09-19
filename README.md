@@ -1,4 +1,4 @@
-![English Word Book Preview](view.png)
+![English Word Book Preview](static/view.png)
 
 # English Word Book
 
