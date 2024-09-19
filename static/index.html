@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Word Book</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        h1, h2 {
+            color: #4a4a4a;
+            text-align: center;
+        }
+        #word-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            justify-content: center;
+        }
+        .word-card {
+            position: relative;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            background-color: #f9f9f9;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .word-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+        #exam-section {
+            margin-top: 40px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: block;
+            font-size: 16px;
+            margin: 20px auto;
+            cursor: pointer;
+            border-radius: 4px;
+            width: 100%;
+            max-width: 300px;
+        }
+        audio {
+            width: 100%;
+            margin-top: 10px;
+        }
+        .word-number {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            #word-list {
+                grid-template-columns: 1fr;
+            }
+            .word-card {
+                max-width: 100%;
+            }
+        }
+        .exam-input-group {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        .exam-input-group input {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+        .exam-input-group button {
+            width: auto;
+            margin: 0;
+        }
+        #user-info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            align-items: center;
+            background-color: #f0f0f0;
+            padding: 5px 10px;
+            border-radius: 20px;
+        }
+        #user-info img {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        #results-section {
+            margin-top: 40px;
+        }
+        #results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        #results-table th, #results-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        #results-table th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <div id="user-info"></div>
+    <h1>English Word Book</h1>
+    
+    <div id="word-list"></div>
+    
+    <div id="exam-section">
+        <h2>Exam</h2>
+        <div id="exam-words"></div>
+        <button onclick="submitExam()">Submit Answers</button>
+    </div>
+
+    <div id="results-section">
+        <h2>Exam Results</h2>
+        <table id="results-table">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Best Score</th>
+                    <th>Total</th>
+                    <th>Latest Attempt</th>
+                </tr>
+            </thead>
+            <tbody id="results-body"></tbody>
+        </table>
+    </div>
+
+    <script>
+        let weeklyWords = [];
+        let currentUser = null;
+
+        async function fetchWithAuth(url, options = {}) {
+            const token = localStorage.getItem('access_token');
+            console.log('Token from localStorage:', token);
+            if (!token) {
+                console.log('No token found, redirecting to login page');
+                window.location.href = '/';
+                return;
+            }
+            const headers = {
+                ...options.headers,
+                'Authorization': `Bearer ${token}`
+            };
+            console.log('Sending request with headers:', headers);
+            const response = await fetch(url, { ...options, headers });
+            console.log('Received response:', response);
+            if (response.status === 401) {
+                console.log('Unauthorized, redirecting to login page');
+                localStorage.removeItem('access_token');
+                window.location.href = '/';
+                return;
+            }
+            return response;
+        }
+
+        async function loadUserInfo() {
+            try {
+                const response = await fetchWithAuth('/user_info');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                currentUser = await response.json();
+                displayUserInfo();
+            } catch (e) {
+                console.error("Error loading user info:", e);
+            }
+        }
+
+        function displayUserInfo() {
+            const userInfoDiv = document.getElementById('user-info');
+            if (currentUser) {
+                userInfoDiv.innerHTML = `
+                    <img src="${currentUser.image_path}" alt="User avatar">
+                    <span>${currentUser.full_name || currentUser.username}</span>
+                `;
+            }
+        }
+
+        async function loadWords() {
+            try {
+                const response = await fetchWithAuth('/words');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                weeklyWords = await response.json();
+                console.log('Loaded words:', weeklyWords);
+                displayWords();
+            } catch (e) {
+                console.error("Error loading words:", e);
+                if (e.message.includes('401')) {
+                    // Если ошибка аутентификации, перенаправляем на страницу входа
+                    window.location.href = '/';
+                }
+            }
+        }
+    
+        function displayWords() {
+            const wordList = document.getElementById('word-list');
+            const examWords = document.getElementById('exam-words');
+            
+            wordList.innerHTML = '';
+            examWords.innerHTML = '';
+
+            weeklyWords.forEach((word, index) => {
+                const wordCard = document.createElement('div');
+                wordCard.className = 'word-card';
+                wordCard.innerHTML = `
+                    <div class="word-number">${index + 1}</div>
+                    <h3>${word.word}</h3>
+                    <p>Category: ${word.category}</p>
+                    <img src="${word.image_path}" alt="${word.word}" class="word-image">
+                    <audio controls>
+                        <source src="${word.audio_path}" type="audio/mpeg">
+                        Your browser does not support the audio element.
+                    </audio>
+                `;
+                wordList.appendChild(wordCard);
+
+                const examInputGroup = document.createElement('div');
+                examInputGroup.className = 'exam-input-group';
+                
+                const examInput = document.createElement('input');
+                examInput.type = 'text';
+                examInput.placeholder = `Word ${index + 1}`;
+                examInput.id = `exam-word-${index}`;
+                
+                const confirmButton = document.createElement('button');
+                confirmButton.textContent = 'Confirm';
+                confirmButton.onclick = () => confirmWord(index);
+                
+                examInputGroup.appendChild(examInput);
+                examInputGroup.appendChild(confirmButton);
+                examWords.appendChild(examInputGroup);
+            });
+        }
+    
+        function confirmWord(index) {
+            const input = document.getElementById(`exam-word-${index}`);
+            const enteredWord = input.value.toLowerCase().trim();
+            const correctWord = weeklyWords[index].word.toLowerCase();
+
+            if (enteredWord === correctWord) {
+                input.style.backgroundColor = '#d4edda';
+                input.disabled = true;
+            } else {
+                const otherWordIndex = weeklyWords.findIndex(w => w.word.toLowerCase() === enteredWord);
+                if (otherWordIndex !== -1 && otherWordIndex !== index) {
+                    alert(`This word belongs to position ${otherWordIndex + 1}`);
+                } else {
+                    alert("I think there's an error in your answer. Please check and try again.");
+                }
+            }
+        }
+    
+        async function submitExam() {
+            const answers = weeklyWords.map((_, index) => 
+                document.getElementById(`exam-word-${index}`).value
+            );
+
+            const response = await fetchWithAuth('/exam', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(answers),
+            });
+
+            const result = await response.json();
+            alert(`Your score: ${result.score} out of ${result.total}`);
+            await loadExamResults();
+        }
+
+        async function loadExamResults() {
+            try {
+                const response = await fetchWithAuth('/exam_results');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const results = await response.json();
+                displayExamResults(results);
+            } catch (e) {
+                console.error("Error loading exam results:", e);
+            }
+        }
+
+        function displayExamResults(results) {
+            const resultsBody = document.getElementById('results-body');
+            resultsBody.innerHTML = '';
+            results.forEach(result => {
+                const row = resultsBody.insertRow();
+                row.insertCell(0).textContent = result.username;
+                row.insertCell(1).textContent = result.score;
+                row.insertCell(2).textContent = result.total;
+                row.insertCell(3).textContent = new Date(result.timestamp).toLocaleString();
+            });
+        }
+
+        async function initialize() {
+            console.log('Initializing...');
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                console.log('No token found, redirecting to login page');
+                window.location.href = '/';
+                return;
+            }
+            await loadUserInfo();
+            if (currentUser) {
+                console.log('User loaded:', currentUser);
+                await loadWords();
+                await loadExamResults();
+            } else {
+                console.log('No user loaded, redirecting to login page');
+                localStorage.removeItem('access_token');
+                window.location.href = '/';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initialize);
+    </script>
+</body>
+</html>

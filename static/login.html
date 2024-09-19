@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .login-container {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 100%;
+            max-width: 350px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 1.5rem;
+            font-size: 1.8rem;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        input {
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 1.5rem;
+            }
+            h1 {
+                font-size: 1.5rem;
+            }
+            input, button {
+                font-size: 0.9rem;
+            }
+        }
+        .hint {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>Login</h1>
+        <p class="hint">Введите test1, test2, ..., или test10</p>
+        <form action="/login" method="post">
+            <input type="text" name="username" placeholder="Username (e.g., test1)" required>
+            <input type="password" name="password" placeholder="Password (same as username)" required>
+            <button type="submit">Login</button>
+        </form>
+    </div>
+
+    <script>
+        document.querySelector('form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            try {
+                console.log('Sending login request...');
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    body: formData
+                });
+                console.log('Received response:', response);
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Login successful, received data:', data);
+                    localStorage.setItem('access_token', data.access_token);
+                    console.log('Token saved to localStorage');
+                    console.log('Redirecting to /index');
+                    window.location.href = '/index';
+                } else {
+                    const data = await response.json();
+                    console.error('Login failed:', data);
+                    alert(`Login failed: ${data.detail}`);
+                }
+            } catch (error) {
+                console.error('Error during login:', error);
+                alert('An error occurred during login. Please try again.');
+            }
+        });
+    </script>
+</body>
+</html>
