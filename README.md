@@ -1,3 +1,5 @@
+![English Word Book Preview](view.png)
+
 # English Word Book
 
 English Word Book - это веб-приложение для изучения английских слов, разработанное с использованием FastAPI на бэкенде и HTML/JavaScript на фронтенде.
